@@ -61,6 +61,7 @@ class BiAiScenesConfiguration
     public static function defaults()
     {
         return [
+            self::KEY_API_KEY => '',
             self::KEY_PROVIDER_SCENE => 'flux2_dev',
             self::KEY_PROVIDER_INPAINT => 'flux_inpainting',
             self::KEY_PROVIDER_UPSCALE => 'google_upscaler',
