@@ -167,11 +167,330 @@ class AdminBiAiScenesGenerateController extends ModuleAdminController
                     }
                     $resp = ['success' => true, 'rows' => $rows];
                     break;
+                case 'list_products':
+                    $resp = $this->ajaxListProducts();
+                    break;
+                case 'product_images':
+                    $resp = $this->ajaxProductImages((int) Tools::getValue('id_product'));
+                    break;
+                case 'queue_batch':
+                    $resp = $this->ajaxQueueBatch();
+                    break;
+                case 'process_batch_item':
+                    $resp = $this->ajaxProcessNextBatchItem($service);
+                    break;
+                case 'batch_status':
+                    $resp = $this->ajaxBatchStatus();
+                    break;
             }
         } catch (Exception $e) {
             $resp = ['success' => false, 'error' => $e->getMessage()];
         }
         echo json_encode($resp);
         exit;
+    }
+
+    /**
+     * Paginated product listing for the batch table. Includes the latest
+     * render status per product so we can show a "succeeded / failed /
+     * pending" badge inline.
+     *
+     * @return array
+     */
+    private function ajaxListProducts()
+    {
+        $idShop = (int) $this->context->shop->id;
+        $idLang = (int) $this->context->language->id;
+        $page = max(1, (int) Tools::getValue('page', 1));
+        $perPage = max(5, min(100, (int) Tools::getValue('per_page', 20)));
+        $search = trim((string) Tools::getValue('search'));
+        $statusFilter = (string) Tools::getValue('status');
+        $offset = ($page - 1) * $perPage;
+
+        $where = 'p.id_product > 0';
+        if ($search !== '') {
+            $term = pSQL($search);
+            $where .= " AND (pl.name LIKE '%" . $term . "%' OR p.reference LIKE '%" . $term . "%' OR p.id_product = " . (int) $search . ')';
+        }
+
+        $countSql = 'SELECT COUNT(*) FROM ' . _DB_PREFIX_ . 'product p'
+            . ' INNER JOIN ' . _DB_PREFIX_ . 'product_lang pl ON pl.id_product = p.id_product AND pl.id_lang = ' . $idLang
+            . ' WHERE ' . $where;
+        $total = (int) Db::getInstance()->getValue($countSql);
+
+        $sql = 'SELECT p.id_product, p.reference, p.active, pl.name'
+            . ' FROM ' . _DB_PREFIX_ . 'product p'
+            . ' INNER JOIN ' . _DB_PREFIX_ . 'product_lang pl ON pl.id_product = p.id_product AND pl.id_lang = ' . $idLang
+            . ' WHERE ' . $where
+            . ' ORDER BY p.id_product DESC LIMIT ' . (int) $offset . ', ' . (int) $perPage;
+        $rows = Db::getInstance()->executeS($sql) ?: [];
+
+        if (empty($rows)) {
+            return ['success' => true, 'rows' => [], 'total' => $total, 'page' => $page, 'per_page' => $perPage];
+        }
+
+        $ids = array_map(static function ($r) { return (int) $r['id_product']; }, $rows);
+        $idsCsv = implode(',', $ids) ?: '0';
+
+        $latestByProduct = [];
+        $latestSql = 'SELECT r.* FROM ' . _DB_PREFIX_ . 'bi_ai_scenes_renders r'
+            . ' INNER JOIN (SELECT id_product, MAX(date_upd) AS m FROM ' . _DB_PREFIX_ . 'bi_ai_scenes_renders'
+            . ' WHERE id_shop = ' . $idShop . ' AND id_product IN (' . $idsCsv . ') GROUP BY id_product) g'
+            . ' ON g.id_product = r.id_product AND g.m = r.date_upd'
+            . ' WHERE r.id_shop = ' . $idShop;
+        foreach ((Db::getInstance()->executeS($latestSql) ?: []) as $r) {
+            $latestByProduct[(int) $r['id_product']] = $r;
+        }
+
+        $coverByProduct = [];
+        $coverSql = 'SELECT id_product, MIN(id_image) AS id_image FROM ' . _DB_PREFIX_ . 'image'
+            . ' WHERE id_product IN (' . $idsCsv . ') AND cover = 1 GROUP BY id_product';
+        foreach ((Db::getInstance()->executeS($coverSql) ?: []) as $r) {
+            $coverByProduct[(int) $r['id_product']] = (int) $r['id_image'];
+        }
+
+        $manager = new BiAiScenesImageManager($this->module);
+        foreach ($rows as &$row) {
+            $idP = (int) $row['id_product'];
+            $row['cover_id_image'] = isset($coverByProduct[$idP]) ? (int) $coverByProduct[$idP] : 0;
+            $row['cover_url'] = $row['cover_id_image']
+                ? Context::getContext()->link->getImageLink($row['name'], $idP . '-' . $row['cover_id_image'], 'small_default')
+                : '';
+            $row['has_combinations'] = (bool) Db::getInstance()->getValue(
+                'SELECT 1 FROM ' . _DB_PREFIX_ . 'product_attribute WHERE id_product = ' . $idP . ' LIMIT 1'
+            );
+            $latest = isset($latestByProduct[$idP]) ? $latestByProduct[$idP] : null;
+            if ($latest) {
+                $row['render_status'] = $latest['status'];
+                $row['render_operation'] = $latest['operation'];
+                $row['render_provider'] = $latest['provider_key'];
+                $row['render_url'] = !empty($latest['image_filename'])
+                    ? $manager->getPublicUrl(BiAiScenesImageManager::SUBDIR_RENDERS, $latest['image_filename'])
+                    : '';
+                $row['render_date'] = $latest['date_upd'];
+            } else {
+                $row['render_status'] = '';
+                $row['render_url'] = '';
+            }
+        }
+        unset($row);
+
+        if ($statusFilter !== '') {
+            $rows = array_values(array_filter($rows, static function ($r) use ($statusFilter) {
+                if ($statusFilter === 'none') {
+                    return $r['render_status'] === '';
+                }
+                return $r['render_status'] === $statusFilter;
+            }));
+        }
+
+        return ['success' => true, 'rows' => $rows, 'total' => $total, 'page' => $page, 'per_page' => $perPage];
+    }
+
+    /**
+     * List images + combinations of a single product so the user can pick
+     * the source image for a scene/inpaint/upscale operation.
+     *
+     * @param int $idProduct
+     *
+     * @return array
+     */
+    private function ajaxProductImages($idProduct)
+    {
+        if ($idProduct <= 0) {
+            return ['success' => false, 'error' => 'id_product required'];
+        }
+        $idLang = (int) $this->context->language->id;
+        $product = new Product($idProduct, false, $idLang);
+        if (!Validate::isLoadedObject($product)) {
+            return ['success' => false, 'error' => 'Product not found'];
+        }
+
+        $images = [];
+        foreach (Image::getImages($idLang, $idProduct) as $img) {
+            $images[] = [
+                'id_image' => (int) $img['id_image'],
+                'cover' => (int) $img['cover'],
+                'position' => (int) $img['position'],
+                'url' => $this->context->link->getImageLink($product->link_rewrite, $idProduct . '-' . (int) $img['id_image'], 'large_default'),
+                'thumb' => $this->context->link->getImageLink($product->link_rewrite, $idProduct . '-' . (int) $img['id_image'], 'small_default'),
+            ];
+        }
+
+        $combinations = [];
+        $combos = $product->getAttributeCombinations($idLang) ?: [];
+        $byPa = [];
+        foreach ($combos as $c) {
+            $idPa = (int) $c['id_product_attribute'];
+            if (!isset($byPa[$idPa])) {
+                $byPa[$idPa] = [
+                    'id_product_attribute' => $idPa,
+                    'reference' => (string) $c['reference'],
+                    'attributes' => [],
+                    'id_image' => 0,
+                ];
+            }
+            $byPa[$idPa]['attributes'][] = $c['group_name'] . ': ' . $c['attribute_name'];
+        }
+        // Combination → cover image (id_image)
+        if ($byPa) {
+            $idsPa = implode(',', array_map('intval', array_keys($byPa))) ?: '0';
+            $rows = Db::getInstance()->executeS(
+                'SELECT id_product_attribute, id_image FROM ' . _DB_PREFIX_ . 'product_attribute_image'
+                . ' WHERE id_product_attribute IN (' . $idsPa . ')'
+            ) ?: [];
+            foreach ($rows as $r) {
+                $idPa = (int) $r['id_product_attribute'];
+                if (isset($byPa[$idPa]) && empty($byPa[$idPa]['id_image'])) {
+                    $byPa[$idPa]['id_image'] = (int) $r['id_image'];
+                    $byPa[$idPa]['thumb'] = $this->context->link->getImageLink(
+                        $product->link_rewrite,
+                        $idProduct . '-' . (int) $r['id_image'],
+                        'small_default'
+                    );
+                }
+            }
+        }
+        $combinations = array_values($byPa);
+
+        return [
+            'success' => true,
+            'id_product' => $idProduct,
+            'name' => (string) $product->name,
+            'reference' => (string) $product->reference,
+            'images' => $images,
+            'combinations' => $combinations,
+        ];
+    }
+
+    /**
+     * Enqueue a batch of (product, image, optional combination) tuples for
+     * the requested operation. Items are processed by polling
+     * `process_batch_item` from the JS.
+     *
+     * @return array
+     */
+    private function ajaxQueueBatch()
+    {
+        $itemsJson = (string) Tools::getValue('items');
+        $items = json_decode($itemsJson, true);
+        if (!is_array($items) || !$items) {
+            return ['success' => false, 'error' => 'No items'];
+        }
+        $operation = (string) Tools::getValue('operation');
+        $providerKey = (string) Tools::getValue('provider');
+        $prompt = (string) Tools::getValue('prompt');
+        $params = [
+            'negative_prompt' => (string) Tools::getValue('negative_prompt'),
+            'aspect_ratio' => (string) Tools::getValue('aspect_ratio'),
+            'output_format' => (string) Tools::getValue('output_format'),
+            'scale' => (int) Tools::getValue('scale'),
+            'strength' => (float) Tools::getValue('strength'),
+            'guidance_scale' => (float) Tools::getValue('guidance_scale'),
+            'num_inference_steps' => (int) Tools::getValue('num_inference_steps'),
+        ];
+        $idShop = (int) $this->context->shop->id;
+        $idEmployee = (int) (Context::getContext()->employee ? Context::getContext()->employee->id : 0);
+        $batchName = 'batch_' . date('Ymd_His') . '_' . substr(md5(microtime(true)), 0, 6);
+
+        $queued = 0;
+        foreach ($items as $it) {
+            $idProduct = (int) (isset($it['id_product']) ? $it['id_product'] : 0);
+            $idPa = (int) (isset($it['id_product_attribute']) ? $it['id_product_attribute'] : 0);
+            $imageUrl = (string) (isset($it['image_url']) ? $it['image_url'] : '');
+            if ($imageUrl === '' || $idProduct <= 0) {
+                continue;
+            }
+            Db::getInstance()->insert('bi_ai_scenes_batch_queue', [
+                'batch_name' => pSQL($batchName),
+                'operation' => pSQL($operation),
+                'provider_key' => pSQL($providerKey),
+                'id_product' => $idProduct,
+                'id_product_attribute' => $idPa,
+                'image_urls' => pSQL($imageUrl, true),
+                'mask_url' => '',
+                'prompt' => pSQL($prompt, true),
+                'params_json' => pSQL(json_encode($params), true),
+                'status' => 'queued',
+                'priority' => 0,
+                'id_employee' => $idEmployee,
+                'id_shop' => $idShop,
+                'date_add' => date('Y-m-d H:i:s'),
+                'date_upd' => date('Y-m-d H:i:s'),
+            ]);
+            ++$queued;
+        }
+
+        return ['success' => true, 'queued' => $queued, 'batch_name' => $batchName];
+    }
+
+    /**
+     * Pop the next queued item, hand it to the GenerationService and mark
+     * the queue row accordingly. Called repeatedly by the JS.
+     *
+     * @param BiAiScenesGenerationService $service
+     *
+     * @return array
+     */
+    private function ajaxProcessNextBatchItem(BiAiScenesGenerationService $service)
+    {
+        $idShop = (int) $this->context->shop->id;
+        $row = Db::getInstance()->getRow(
+            'SELECT * FROM ' . _DB_PREFIX_ . 'bi_ai_scenes_batch_queue'
+            . " WHERE status = 'queued' AND id_shop = " . $idShop
+            . ' ORDER BY priority DESC, id_batch ASC LIMIT 1'
+        );
+        if (!$row) {
+            return ['success' => true, 'done' => true];
+        }
+        $idBatch = (int) $row['id_batch'];
+        Db::getInstance()->update('bi_ai_scenes_batch_queue', [
+            'status' => 'processing',
+            'date_upd' => date('Y-m-d H:i:s'),
+        ], 'id_batch = ' . $idBatch);
+
+        $params = json_decode((string) $row['params_json'], true) ?: [];
+        $params['prompt'] = (string) $row['prompt'];
+        $params['image_url'] = (string) $row['image_urls'];
+        $context = [
+            'id_product' => (int) $row['id_product'],
+            'id_product_attribute' => (int) $row['id_product_attribute'],
+        ];
+        $result = $service->start((string) $row['provider_key'], $params, $context);
+
+        $newStatus = !empty($result['success']) ? 'completed' : (!empty($result['pending']) ? 'processing' : 'failed');
+        Db::getInstance()->update('bi_ai_scenes_batch_queue', [
+            'status' => $newStatus,
+            'error_message' => isset($result['error']) ? pSQL((string) $result['error'], true) : '',
+            'date_upd' => date('Y-m-d H:i:s'),
+        ], 'id_batch = ' . $idBatch);
+
+        return [
+            'success' => true,
+            'id_batch' => $idBatch,
+            'item_status' => $newStatus,
+            'item_result' => $result,
+        ];
+    }
+
+    /**
+     * Aggregate counts for the batch progress bar.
+     *
+     * @return array
+     */
+    private function ajaxBatchStatus()
+    {
+        $idShop = (int) $this->context->shop->id;
+        $rows = Db::getInstance()->executeS(
+            'SELECT status, COUNT(*) AS cnt FROM ' . _DB_PREFIX_ . 'bi_ai_scenes_batch_queue'
+            . ' WHERE id_shop = ' . $idShop
+            . ' GROUP BY status'
+        ) ?: [];
+        $counts = ['queued' => 0, 'processing' => 0, 'completed' => 0, 'failed' => 0, 'canceled' => 0];
+        foreach ($rows as $r) {
+            $counts[$r['status']] = (int) $r['cnt'];
+        }
+
+        return ['success' => true, 'counts' => $counts];
     }
 }

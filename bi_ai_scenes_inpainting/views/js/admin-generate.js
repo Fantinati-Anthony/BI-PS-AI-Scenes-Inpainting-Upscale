@@ -252,4 +252,249 @@
     }
     els.slider.addEventListener('input', updateSlider);
     updateSlider();
+
+    /* ============================================================
+     * Products panel: paginated list, image picker, bulk queueing.
+     * ============================================================ */
+    var prodEls = {
+        tbody: $('.bi-scenes-products-tbody'),
+        search: $('.bi-scenes-search'),
+        statusFilter: $('.bi-scenes-status-filter'),
+        selectPage: $('.bi-scenes-select-page'),
+        bulkCount: $('.bi-scenes-bulk-count'),
+        pageInfo: $('.bi-scenes-page-info'),
+        progressLabel: $('.bi-scenes-batch-label'),
+        progressBar: $('.bi-scenes-batch-bar'),
+    };
+    var prodState = { page: 1, perPage: 20, total: 0, rows: [] };
+    var pickedByProduct = {}; // id_product -> { id_product_attribute, image_url }
+
+    function pickedKey(idProduct, idPa) { return idProduct + ':' + (idPa || 0); }
+
+    function selectedItems() {
+        var out = [];
+        Array.prototype.forEach.call(prodEls.tbody.querySelectorAll('input.bi-scenes-row-cb:checked'), function (cb) {
+            var idP = parseInt(cb.value, 10);
+            var pick = pickedByProduct[idP];
+            if (!pick || !pick.image_url) return;
+            out.push({ id_product: idP, id_product_attribute: pick.id_product_attribute || 0, image_url: pick.image_url });
+        });
+        return out;
+    }
+
+    function refreshBulkCount() {
+        var n = selectedItems().length;
+        prodEls.bulkCount.dataset.count = n;
+        prodEls.bulkCount.textContent = n + ' ' + prodEls.bulkCount.textContent.replace(/^\d+ /, '');
+    }
+
+    function renderProductsTable() {
+        prodEls.tbody.innerHTML = '';
+        prodState.rows.forEach(function (row) {
+            var tr = document.createElement('tr');
+            tr.dataset.idProduct = row.id_product;
+            var pickedUrl = (pickedByProduct[row.id_product] && pickedByProduct[row.id_product].image_url) ||
+                            (row.cover_url || '');
+            if (pickedUrl && !pickedByProduct[row.id_product]) {
+                pickedByProduct[row.id_product] = { id_product_attribute: 0, image_url: pickedUrl };
+            }
+            var statusBadge = row.render_status
+                ? '<span class="bi-scenes-status-badge ' + row.render_status + '">' + row.render_operation + ' / ' + row.render_status + '</span>'
+                : '<span class="bi-scenes-status-badge none">—</span>';
+            var renderThumb = row.render_url ? '<a href="' + row.render_url + '" target="_blank"><img class="bi-scenes-mini" src="' + row.render_url + '"></a>' : '';
+            tr.innerHTML =
+                '<td><input type="checkbox" class="bi-scenes-row-cb" value="' + row.id_product + '"></td>' +
+                '<td><img class="bi-scenes-cover" src="' + (pickedUrl || '') + '" alt=""></td>' +
+                '<td>' + row.id_product + '</td>' +
+                '<td>' + (row.name || '') + (row.has_combinations ? ' <span class="bi-scenes-combo-badge">v</span>' : '') + '</td>' +
+                '<td>' + (row.reference || '') + '</td>' +
+                '<td>' + statusBadge + ' ' + renderThumb + '</td>' +
+                '<td>' +
+                    '<button type="button" class="btn btn-outline btn-xs" data-row-action="pick-image">' + 'Image' + '</button> ' +
+                    '<button type="button" class="btn btn-primary btn-xs" data-row-action="run-now">' + 'Run' + '</button>' +
+                '</td>';
+            prodEls.tbody.appendChild(tr);
+        });
+        prodEls.pageInfo.textContent = prodState.page + ' / ' + Math.max(1, Math.ceil(prodState.total / prodState.perPage));
+        refreshBulkCount();
+    }
+
+    function loadProducts() {
+        ajax('list_products', {
+            page: prodState.page,
+            per_page: prodState.perPage,
+            search: prodEls.search.value,
+            status: prodEls.statusFilter.value,
+        }).then(function (r) {
+            if (!r || !r.success) return;
+            prodState.rows = r.rows;
+            prodState.total = r.total;
+            renderProductsTable();
+        });
+    }
+
+    prodEls.search.addEventListener('input', function () {
+        clearTimeout(prodEls.search._t);
+        prodEls.search._t = setTimeout(function () { prodState.page = 1; loadProducts(); }, 250);
+    });
+    prodEls.statusFilter.addEventListener('change', function () { prodState.page = 1; loadProducts(); });
+    $$('[data-action="reload-products"]').forEach(function (b) { b.addEventListener('click', loadProducts); });
+    $$('[data-page-prev]').forEach(function (b) { b.addEventListener('click', function () { if (prodState.page > 1) { prodState.page--; loadProducts(); } }); });
+    $$('[data-page-next]').forEach(function (b) { b.addEventListener('click', function () { if (prodState.page * prodState.perPage < prodState.total) { prodState.page++; loadProducts(); } }); });
+
+    prodEls.selectPage.addEventListener('change', function () {
+        var on = prodEls.selectPage.checked;
+        Array.prototype.forEach.call(prodEls.tbody.querySelectorAll('input.bi-scenes-row-cb'), function (cb) { cb.checked = on; });
+        refreshBulkCount();
+    });
+    prodEls.tbody.addEventListener('change', function (e) {
+        if (e.target && e.target.classList.contains('bi-scenes-row-cb')) refreshBulkCount();
+    });
+
+    /* Per-row actions */
+    prodEls.tbody.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-row-action]');
+        if (!btn) return;
+        var tr = btn.closest('tr');
+        var idP = parseInt(tr.dataset.idProduct, 10);
+        if (btn.dataset.rowAction === 'pick-image') openImagePicker(idP, tr);
+        if (btn.dataset.rowAction === 'run-now') runRowNow(idP);
+    });
+
+    function openImagePicker(idProduct, tr) {
+        ajax('product_images', { id_product: idProduct }).then(function (r) {
+            if (!r || !r.success) return;
+            var modal = document.createElement('div');
+            modal.className = 'bi-scenes-modal';
+            var html = '<div class="bi-scenes-modal-backdrop" data-close-modal></div>' +
+                '<div class="bi-scenes-modal-dialog"><header><h2>' + r.name + ' (#' + r.id_product + ')</h2>' +
+                '<button type="button" class="bi-scenes-modal-close" data-close-modal>&times;</button></header>' +
+                '<div class="bi-scenes-modal-body">' +
+                '<h3>Product images</h3><div class="bi-scenes-img-grid">';
+            r.images.forEach(function (img) {
+                html += '<button type="button" class="bi-scenes-pick" data-id-pa="0" data-url="' + img.url + '">' +
+                        '<img src="' + img.thumb + '"><span>#' + img.id_image + (img.cover ? ' ★' : '') + '</span></button>';
+            });
+            html += '</div>';
+            if (r.combinations && r.combinations.length) {
+                html += '<h3>Combinations</h3><div class="bi-scenes-img-grid">';
+                r.combinations.forEach(function (c) {
+                    if (!c.thumb) return;
+                    var url = c.thumb.replace(/-small_default/, '-large_default');
+                    html += '<button type="button" class="bi-scenes-pick" data-id-pa="' + c.id_product_attribute + '" data-url="' + url + '">' +
+                            '<img src="' + c.thumb + '"><span>' + (c.reference || ('#' + c.id_product_attribute)) + '<br>' +
+                            (c.attributes || []).join(' / ') + '</span></button>';
+                });
+                html += '</div>';
+            }
+            html += '</div></div>';
+            modal.innerHTML = html;
+            modal.style.position = 'fixed'; modal.style.inset = '0'; modal.style.zIndex = '99999';
+            document.body.appendChild(modal);
+            modal.querySelectorAll('[data-close-modal]').forEach(function (el) { el.addEventListener('click', function () { modal.remove(); }); });
+            modal.querySelectorAll('.bi-scenes-pick').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    var idPa = parseInt(b.dataset.idPa, 10) || 0;
+                    pickedByProduct[idProduct] = { id_product_attribute: idPa, image_url: b.dataset.url };
+                    var cover = tr.querySelector('.bi-scenes-cover');
+                    if (cover) cover.src = b.dataset.url;
+                    modal.remove();
+                });
+            });
+        });
+    }
+
+    function runRowNow(idProduct) {
+        var pick = pickedByProduct[idProduct];
+        if (!pick || !pick.image_url) {
+            setStatus('Pick a product image first.', 'warn');
+            return;
+        }
+        els.srcUrl.value = pick.image_url;
+        loadSource(pick.image_url);
+        var providerKey = els.provider.value;
+        ajax('generate', {
+            provider: providerKey,
+            prompt: els.prompt.value,
+            negative_prompt: els.negPrompt.value,
+            image_url: pick.image_url,
+            id_product: idProduct,
+            id_product_attribute: pick.id_product_attribute || 0,
+            aspect_ratio: ($('select[name="aspect_ratio"]') || {}).value,
+            output_format: ($('select[name="output_format"]') || {}).value,
+            scale: ($('input[name="scale"]') || {}).value,
+            strength: ($('input[name="strength"]') || {}).value,
+            guidance_scale: ($('input[name="guidance_scale"]') || {}).value,
+            seed: ($('input[name="seed"]') || {}).value,
+        }).then(function (r) {
+            if (r && r.success) onSucceeded(r);
+            else if (r && r.pending) startPolling(r.prediction_id);
+            else if (r && r.error) setStatus('Error: ' + r.error, 'error');
+        });
+    }
+
+    /* Bulk queue */
+    $$('[data-action="queue-selected"]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            var items = selectedItems();
+            if (!items.length) { setStatus('Select rows + pick an image per row first.', 'warn'); return; }
+            ajax('queue_batch', {
+                items: JSON.stringify(items),
+                operation: currentOp,
+                provider: els.provider.value,
+                prompt: els.prompt.value,
+                negative_prompt: els.negPrompt.value,
+                aspect_ratio: ($('select[name="aspect_ratio"]') || {}).value,
+                output_format: ($('select[name="output_format"]') || {}).value,
+                scale: ($('input[name="scale"]') || {}).value,
+                strength: ($('input[name="strength"]') || {}).value,
+                guidance_scale: ($('input[name="guidance_scale"]') || {}).value,
+                num_inference_steps: ($('input[name="num_inference_steps"]') || {}).value,
+            }).then(function (r) {
+                if (r && r.success) {
+                    setStatus('Queued ' + r.queued + ' items. Click "Run queue" to process.', 'info');
+                    refreshBatchStatus();
+                } else if (r && r.error) {
+                    setStatus('Error: ' + r.error, 'error');
+                }
+            });
+        });
+    });
+
+    var batchPumpRunning = false;
+    function pumpOne() {
+        if (!batchPumpRunning) return;
+        ajax('process_batch_item', {}).then(function (r) {
+            if (!r || !r.success || r.done) {
+                batchPumpRunning = false;
+                refreshBatchStatus();
+                loadProducts();
+                return;
+            }
+            refreshBatchStatus();
+            // Tiny delay to avoid hammering
+            setTimeout(pumpOne, 800);
+        });
+    }
+    function refreshBatchStatus() {
+        ajax('batch_status', {}).then(function (r) {
+            if (!r || !r.success) return;
+            var c = r.counts;
+            var total = c.queued + c.processing + c.completed + c.failed + c.canceled;
+            var done = c.completed + c.failed + c.canceled;
+            prodEls.progressBar.max = Math.max(1, total);
+            prodEls.progressBar.value = done;
+            prodEls.progressLabel.textContent = done + ' / ' + total + ' (queued ' + c.queued + ', processing ' + c.processing + ', completed ' + c.completed + ', failed ' + c.failed + ')';
+        });
+    }
+    $$('[data-action="batch-pump-toggle"]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            batchPumpRunning = !batchPumpRunning;
+            b.textContent = batchPumpRunning ? 'Pause queue' : 'Run queue';
+            if (batchPumpRunning) pumpOne();
+        });
+    });
+
+    loadProducts();
+    refreshBatchStatus();
 })();

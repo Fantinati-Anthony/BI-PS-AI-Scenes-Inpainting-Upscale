@@ -17,11 +17,62 @@
         </div>
     </header>
 
+    <section class="bi-scenes-products">
+        <div class="bi-scenes-products-head">
+            <h2>{l s='Products' d='Modules.BiAiScenesInpainting.AdminGenerate'}</h2>
+            <input type="search" class="bi-scenes-search" placeholder="{l s='Search by name, reference or ID' d='Modules.BiAiScenesInpainting.AdminGenerate'}">
+            <select class="bi-scenes-status-filter">
+                <option value="">{l s='All statuses' d='Modules.BiAiScenesInpainting.AdminGenerate'}</option>
+                <option value="none">{l s='No render yet' d='Modules.BiAiScenesInpainting.AdminGenerate'}</option>
+                <option value="succeeded">{l s='Succeeded' d='Modules.BiAiScenesInpainting.AdminGenerate'}</option>
+                <option value="processing">{l s='Processing' d='Modules.BiAiScenesInpainting.AdminGenerate'}</option>
+                <option value="failed">{l s='Failed' d='Modules.BiAiScenesInpainting.AdminGenerate'}</option>
+            </select>
+            <button type="button" class="btn btn-outline" data-action="reload-products">{l s='Reload' d='Modules.BiAiScenesInpainting.AdminGenerate'}</button>
+        </div>
+
+        <div class="bi-scenes-bulk">
+            <label class="bi-scenes-select-all"><input type="checkbox" class="bi-scenes-select-page"> {l s='Select page' d='Modules.BiAiScenesInpainting.AdminGenerate'}</label>
+            <span class="bi-scenes-bulk-count" data-count="0">0 {l s='selected' d='Modules.BiAiScenesInpainting.AdminGenerate'}</span>
+            <button type="button" class="btn btn-primary" data-action="queue-selected">
+                {l s='Queue selected with current parameters' d='Modules.BiAiScenesInpainting.AdminGenerate'}
+            </button>
+        </div>
+
+        <div class="bi-scenes-products-table-wrap">
+            <table class="bi-scenes-products-table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>{l s='Image' d='Modules.BiAiScenesInpainting.AdminGenerate'}</th>
+                        <th>{l s='ID' d='Modules.BiAiScenesInpainting.AdminGenerate'}</th>
+                        <th>{l s='Name' d='Modules.BiAiScenesInpainting.AdminGenerate'}</th>
+                        <th>{l s='Reference' d='Modules.BiAiScenesInpainting.AdminGenerate'}</th>
+                        <th>{l s='Last render' d='Modules.BiAiScenesInpainting.AdminGenerate'}</th>
+                        <th>{l s='Actions' d='Modules.BiAiScenesInpainting.AdminGenerate'}</th>
+                    </tr>
+                </thead>
+                <tbody class="bi-scenes-products-tbody"></tbody>
+            </table>
+        </div>
+        <div class="bi-scenes-pagination">
+            <button type="button" class="btn btn-outline" data-page-prev>&larr;</button>
+            <span class="bi-scenes-page-info"></span>
+            <button type="button" class="btn btn-outline" data-page-next>&rarr;</button>
+        </div>
+
+        <div class="bi-scenes-batch-progress">
+            <span class="bi-scenes-batch-label"></span>
+            <progress class="bi-scenes-batch-bar" max="1" value="0"></progress>
+            <button type="button" class="btn btn-outline" data-action="batch-pump-toggle">{l s='Run queue' d='Modules.BiAiScenesInpainting.AdminGenerate'}</button>
+        </div>
+    </section>
+
     <div class="bi-scenes-cols">
         <section class="bi-scenes-col bi-scenes-source">
             <h2>{l s='Source' d='Modules.BiAiScenesInpainting.AdminGenerate'}</h2>
             <label class="bi-scenes-uploader">
-                <span>{l s='Drop or paste a product image URL' d='Modules.BiAiScenesInpainting.AdminGenerate'}</span>
+                <span>{l s='Image URL (filled automatically when you pick a product image)' d='Modules.BiAiScenesInpainting.AdminGenerate'}</span>
                 <input type="url" name="image_url" placeholder="https://...">
             </label>
             <div class="bi-scenes-canvas-wrap">
