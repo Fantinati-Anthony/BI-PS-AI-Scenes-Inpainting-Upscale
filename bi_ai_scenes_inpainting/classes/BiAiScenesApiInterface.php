@@ -22,6 +22,8 @@ interface BiAiScenesApiInterface
     public const OP_INPAINT = 'inpaint';
     public const OP_UPSCALE = 'upscale';
 
+    public const PREDICTIONS_URL = 'https://api.replicate.com/v1/predictions';
+
     /**
      * Human-readable provider name (e.g. "Replicate FLUX-2 Pro").
      *

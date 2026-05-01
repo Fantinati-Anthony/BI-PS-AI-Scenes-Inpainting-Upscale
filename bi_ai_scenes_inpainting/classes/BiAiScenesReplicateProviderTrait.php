@@ -15,8 +15,6 @@ if (!defined('_PS_VERSION_')) {
 
 trait BiAiScenesReplicateProviderTrait
 {
-    public const PREDICTIONS_URL = 'https://api.replicate.com/v1/predictions';
-
     /** @var BiAiScenesHttpClient */
     private $http;
 
@@ -52,7 +50,7 @@ trait BiAiScenesReplicateProviderTrait
 
     public function getStatus($predictionId)
     {
-        $result = $this->http->get(self::PREDICTIONS_URL . '/' . $predictionId);
+        $result = $this->http->get(BiAiScenesApiInterface::PREDICTIONS_URL . '/' . $predictionId);
 
         if (!$result['success']) {
             return ['status' => 'error', 'error' => $result['error']];
@@ -67,7 +65,7 @@ trait BiAiScenesReplicateProviderTrait
 
     public function cancel($predictionId)
     {
-        $result = $this->http->post(self::PREDICTIONS_URL . '/' . $predictionId . '/cancel', []);
+        $result = $this->http->post(BiAiScenesApiInterface::PREDICTIONS_URL . '/' . $predictionId . '/cancel', []);
 
         return $result['success'];
     }
@@ -92,7 +90,7 @@ trait BiAiScenesReplicateProviderTrait
         if (strpos($version, '/') !== false) {
             $endpoint = 'https://api.replicate.com/v1/models/' . $version . '/predictions';
         } else {
-            $endpoint = self::PREDICTIONS_URL;
+            $endpoint = BiAiScenesApiInterface::PREDICTIONS_URL;
             $payload['version'] = $version;
         }
 
