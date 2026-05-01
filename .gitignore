@@ -1,0 +1,20 @@
+# Dependencies
+/vendor/
+bi_ai_3dviewer/vendor/
+
+# Composer
+composer.lock
+bi_ai_3dviewer/composer.json
+bi_ai_3dviewer/composer.lock
+
+# QA tool caches
+.phpunit.result.cache
+.phpunit.cache/
+.php-cs-fixer.cache
+.phpstan.cache/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

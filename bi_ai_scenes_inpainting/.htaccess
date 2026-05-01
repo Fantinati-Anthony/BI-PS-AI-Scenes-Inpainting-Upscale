@@ -1,0 +1,3 @@
+<FilesMatch "\.(sql|tpl|md|xlf|json|neon|dist|lock)$">
+    Require all denied
+</FilesMatch>

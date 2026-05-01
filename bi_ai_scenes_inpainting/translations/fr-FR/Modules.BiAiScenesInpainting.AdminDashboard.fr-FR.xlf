@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<xliff version="1.1">
+  <file source-language="en-US" target-language="fr-FR" datatype="plaintext" original="Modules.BiAiScenesInpainting.AdminDashboard">
+    <body>
+      <trans-unit id="dash.title"><source>AI Scenes / Inpainting / Upscale</source><target>Scènes IA / Inpainting / Upscale</target></trans-unit>
+      <trans-unit id="dash.intro"><source>Generate product scenes, inpaint regions and upscale images using Replicate models.</source><target>Générez des mises en scène, retouchez localement et augmentez la résolution avec les modèles Replicate.</target></trans-unit>
+      <trans-unit id="dash.studio"><source>Open the Studio</source><target>Ouvrir le Studio</target></trans-unit>
+      <trans-unit id="dash.config"><source>Configuration</source><target>Configuration</target></trans-unit>
+      <trans-unit id="dash.api"><source>Replicate API</source><target>API Replicate</target></trans-unit>
+      <trans-unit id="dash.succeeded"><source>Succeeded</source><target>Réussies</target></trans-unit>
+      <trans-unit id="dash.processing"><source>Processing</source><target>En cours</target></trans-unit>
+      <trans-unit id="dash.pending"><source>Pending</source><target>En attente</target></trans-unit>
+      <trans-unit id="dash.failed"><source>Failed</source><target>Échouées</target></trans-unit>
+      <trans-unit id="dash.canceled"><source>Canceled</source><target>Annulées</target></trans-unit>
+      <trans-unit id="dash.recent"><source>Recent renders</source><target>Rendus récents</target></trans-unit>
+      <trans-unit id="dash.empty"><source>No renders yet. Open the Studio to start.</source><target>Aucun rendu pour le moment. Ouvrez le Studio pour commencer.</target></trans-unit>
+    </body>
+  </file>
+</xliff>

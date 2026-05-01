@@ -1,0 +1,14 @@
+/* BI - AI Scenes / Inpainting / Upscale - front-office. */
+.bi-scenes-fo-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border: 0; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.bi-scenes-modal { position: fixed; inset: 0; z-index: 1000; }
+.bi-scenes-modal[hidden] { display: none; }
+.bi-scenes-modal-backdrop { position: absolute; inset: 0; background: rgba(15,23,42,.65); }
+.bi-scenes-modal-dialog { position: relative; max-width: min(900px, 92vw); max-height: 92vh; margin: 4vh auto; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.35); display: flex; flex-direction: column; }
+.bi-scenes-modal-dialog header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: #0f172a; color: #fff; }
+.bi-scenes-modal-dialog header h2 { font-size: 16px; margin: 0; }
+.bi-scenes-modal-close { background: transparent; color: #fff; border: 0; font-size: 24px; cursor: pointer; }
+.bi-scenes-modal-body { padding: 16px; overflow: auto; }
+.bi-scenes-compare { position: relative; aspect-ratio: 1/1; border-radius: 12px; overflow: hidden; background: #f3f4f6; }
+.bi-scenes-compare img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.bi-scenes-compare .bi-scenes-after { z-index: 2; }
+.bi-scenes-compare .bi-scenes-slider { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 3; width: calc(100% - 16px); }

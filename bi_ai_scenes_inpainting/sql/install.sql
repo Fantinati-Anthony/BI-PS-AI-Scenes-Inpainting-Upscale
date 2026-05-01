@@ -1,0 +1,83 @@
+CREATE TABLE IF NOT EXISTS `PREFIX_bi_ai_scenes_renders` (
+    `id_bi_ai_scenes_render` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `id_product` INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    `id_product_attribute` INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    `id_image` INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    `operation` ENUM('scene','inpaint','upscale') NOT NULL DEFAULT 'scene',
+    `provider_key` VARCHAR(64) NOT NULL,
+    `prompt` TEXT DEFAULT NULL,
+    `negative_prompt` TEXT DEFAULT NULL,
+    `mask_filename` VARCHAR(255) DEFAULT NULL,
+    `source_image_url` VARCHAR(2048) DEFAULT NULL,
+    `image_filename` VARCHAR(255) DEFAULT NULL,
+    `image_path` VARCHAR(512) DEFAULT NULL,
+    `image_width` INT(11) UNSIGNED DEFAULT 0,
+    `image_height` INT(11) UNSIGNED DEFAULT 0,
+    `prediction_id` VARCHAR(255) DEFAULT NULL,
+    `status` ENUM('pending','processing','succeeded','failed','canceled') NOT NULL DEFAULT 'pending',
+    `error_message` TEXT DEFAULT NULL,
+    `file_size` INT(11) UNSIGNED DEFAULT 0,
+    `params_json` TEXT DEFAULT NULL,
+    `id_shop` INT(11) UNSIGNED NOT NULL DEFAULT 1,
+    `date_add` DATETIME NOT NULL,
+    `date_upd` DATETIME NOT NULL,
+    PRIMARY KEY (`id_bi_ai_scenes_render`),
+    KEY `idx_product` (`id_product`),
+    KEY `idx_product_attribute` (`id_product_attribute`),
+    KEY `idx_status` (`status`),
+    KEY `idx_operation` (`operation`),
+    KEY `idx_shop` (`id_shop`),
+    KEY `idx_prediction` (`prediction_id`)
+) ENGINE=ENGINE_TYPE DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `PREFIX_bi_ai_scenes_generation_log` (
+    `id_log` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `id_product` INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    `id_product_attribute` INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    `operation` VARCHAR(20) DEFAULT NULL,
+    `provider_key` VARCHAR(64) DEFAULT NULL,
+    `action` VARCHAR(50) NOT NULL,
+    `status` VARCHAR(50) NOT NULL,
+    `message` TEXT DEFAULT NULL,
+    `api_response` TEXT DEFAULT NULL,
+    `id_employee` INT(11) UNSIGNED DEFAULT NULL,
+    `id_shop` INT(11) UNSIGNED NOT NULL DEFAULT 1,
+    `date_add` DATETIME NOT NULL,
+    PRIMARY KEY (`id_log`),
+    KEY `idx_product_log` (`id_product`),
+    KEY `idx_date` (`date_add`)
+) ENGINE=ENGINE_TYPE DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `PREFIX_bi_ai_scenes_batch_queue` (
+    `id_batch` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `batch_name` VARCHAR(255) DEFAULT NULL,
+    `operation` ENUM('scene','inpaint','upscale') NOT NULL DEFAULT 'scene',
+    `provider_key` VARCHAR(64) NOT NULL,
+    `id_product` INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    `id_product_attribute` INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    `image_urls` TEXT NOT NULL,
+    `mask_url` VARCHAR(2048) DEFAULT NULL,
+    `prompt` TEXT DEFAULT NULL,
+    `params_json` TEXT DEFAULT NULL,
+    `status` ENUM('queued','processing','completed','failed','canceled') NOT NULL DEFAULT 'queued',
+    `priority` INT(3) UNSIGNED NOT NULL DEFAULT 0,
+    `error_message` TEXT DEFAULT NULL,
+    `id_employee` INT(11) UNSIGNED DEFAULT NULL,
+    `id_shop` INT(11) UNSIGNED NOT NULL DEFAULT 1,
+    `date_add` DATETIME NOT NULL,
+    `date_upd` DATETIME NOT NULL,
+    PRIMARY KEY (`id_batch`),
+    KEY `idx_status_priority` (`status`, `priority`),
+    KEY `idx_product_batch` (`id_product`),
+    KEY `idx_shop_batch` (`id_shop`)
+) ENGINE=ENGINE_TYPE DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `PREFIX_bi_ai_scenes_rate_limit` (
+    `id_rate` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `action` VARCHAR(50) NOT NULL,
+    `id_employee` INT(11) UNSIGNED NOT NULL,
+    `date_add` DATETIME NOT NULL,
+    PRIMARY KEY (`id_rate`),
+    KEY `idx_action_employee` (`action`, `id_employee`),
+    KEY `idx_date` (`date_add`)
+) ENGINE=ENGINE_TYPE DEFAULT CHARSET=utf8mb4;

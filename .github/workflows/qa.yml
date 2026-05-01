@@ -1,0 +1,189 @@
+name: QA
+
+# Quality gates for bi_ai_scenes_inpainting.
+#
+# Blocking checks:
+#  - PHP syntax lint on every PHP file (PHP 7.4 / 8.1 / 8.2 / 8.3)
+#  - Guard: version parity config.xml / module file / CHANGELOG
+#
+# Informational checks:
+#  - PHPStan (skipped automatically if vendor/bin/phpstan is missing)
+#  - PHP-CS-Fixer (skipped automatically if vendor/bin/php-cs-fixer is missing)
+#  - PHPUnit (skipped automatically if no tests/ directory has tests)
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, 'claude/**']
+
+env:
+  MODULE_DIR: bi_ai_scenes_inpainting
+  MODULE_FILE: bi_ai_scenes_inpainting/bi_ai_scenes_inpainting.php
+
+jobs:
+  php-lint:
+    name: PHP syntax (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.1', '8.2', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, openssl, curl
+          coverage: none
+      - name: Lint every PHP file under the module dir
+        working-directory: ${{ env.MODULE_DIR }}
+        run: |
+          set -e
+          fail=0
+          while IFS= read -r f; do
+            php -l "$f" >/dev/null || { echo "::error file=$f::syntax error"; fail=1; }
+          done < <(find . -name "*.php" -not -path "./vendor/*")
+          exit $fail
+
+  phpunit:
+    name: PHPUnit (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.1', '8.2', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, openssl, curl
+          coverage: none
+      - name: Run PHPUnit if available
+        working-directory: ${{ env.MODULE_DIR }}
+        run: |
+          if ! ls tests/*Test.php >/dev/null 2>&1; then
+            echo "No tests yet - skipping PHPUnit."
+            exit 0
+          fi
+          if [ -f composer.json ] && [ ! -d vendor ]; then
+            composer install --prefer-dist --no-interaction --no-progress || true
+          fi
+          if [ -x vendor/bin/phpunit ]; then
+            vendor/bin/phpunit --colors=always tests/
+          else
+            echo "phpunit not installed in vendor/ - skipping."
+          fi
+
+  phpstan:
+    name: PHPStan (level 4)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, openssl, curl
+      - name: Run PHPStan if available
+        working-directory: ${{ env.MODULE_DIR }}
+        run: |
+          if [ -f composer.json ] && [ ! -d vendor ]; then
+            composer install --prefer-dist --no-interaction --no-progress || true
+          fi
+          if [ -x vendor/bin/phpstan ] && { [ -f phpstan.neon ] || [ -f phpstan.neon.dist ]; }; then
+            vendor/bin/phpstan analyse --no-progress || true
+          else
+            echo "phpstan not installed - skipping."
+          fi
+
+  cs-fixer:
+    name: PHP-CS-Fixer (PSR-12 dry-run)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring
+      - name: Run PHP-CS-Fixer if available
+        working-directory: ${{ env.MODULE_DIR }}
+        run: |
+          if [ -f composer.json ] && [ ! -d vendor ]; then
+            composer install --prefer-dist --no-interaction --no-progress || true
+          fi
+          if [ -x vendor/bin/php-cs-fixer ] && { [ -f .php-cs-fixer.dist.php ] || [ -f .php-cs-fixer.php ]; }; then
+            vendor/bin/php-cs-fixer fix --dry-run --diff --using-cache=no || true
+          else
+            echo "php-cs-fixer not installed - skipping."
+          fi
+
+  version-parity:
+    name: Guard / config.xml, module file and CHANGELOG versions agree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract and compare versions
+        run: |
+          set -e
+          CONFIG_VERSION=$(sed -n 's:.*<version><!\[CDATA\[\(.*\)\]\]></version>.*:\1:p' "${{ env.MODULE_DIR }}/config.xml" | head -n1)
+          MODULE_VERSION=$(grep -oE "version = '[^']+'" "${{ env.MODULE_FILE }}" | head -n1 | sed -E "s/.*'([^']+)'/\1/")
+          CHANGELOG_VERSION=$(grep -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | head -n1 | tr -d '[]' | awk '{print $2}')
+
+          echo "config.xml:    $CONFIG_VERSION"
+          echo "module file:   $MODULE_VERSION"
+          echo "CHANGELOG top: $CHANGELOG_VERSION"
+
+          if [ -z "$CONFIG_VERSION" ] || [ -z "$MODULE_VERSION" ] || [ -z "$CHANGELOG_VERSION" ]; then
+            echo "::error::Unable to extract one of the three versions."
+            exit 1
+          fi
+
+          if [ "$CONFIG_VERSION" != "$MODULE_VERSION" ] || [ "$CONFIG_VERSION" != "$CHANGELOG_VERSION" ]; then
+            echo "::error::Version mismatch between config.xml ($CONFIG_VERSION), module file ($MODULE_VERSION) and CHANGELOG.md ($CHANGELOG_VERSION)."
+            exit 1
+          fi
+          echo "OK: all three report $CONFIG_VERSION."
+
+  i18n-parity:
+    name: Guard / translations within +/-5 keys of en.php
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Count translation keys (grep-based)
+        run: |
+          set -e
+          TR_DIR="${{ env.MODULE_DIR }}/translations"
+          EN="$TR_DIR/en.php"
+          if [ ! -f "$EN" ]; then
+            echo "::warning::No en.php in translations - this module ships only XLIFF catalogs, skipping legacy parity check."
+            exit 0
+          fi
+
+          count_module_assignments() {
+            local target="$1"
+            grep -cE "^\\\$_MODULE\[" "$target" 2>/dev/null || echo 0
+          }
+
+          EN_COUNT=$(count_module_assignments "$EN")
+          echo "en.php: $EN_COUNT keys"
+
+          STATUS=0
+          for f in "$TR_DIR"/*.php; do
+            name=$(basename "$f" .php)
+            case "$name" in
+              en|index) continue ;;
+            esac
+            count=$(count_module_assignments "$f")
+            delta=$((count - EN_COUNT))
+            abs_delta=${delta#-}
+            echo "$name.php: $count keys (delta $delta)"
+            if [ "$abs_delta" -gt 5 ]; then
+              echo "::error::$name.php differs from en.php by $abs_delta keys (tolerance: 5)."
+              STATUS=1
+            fi
+          done
+          exit $STATUS
