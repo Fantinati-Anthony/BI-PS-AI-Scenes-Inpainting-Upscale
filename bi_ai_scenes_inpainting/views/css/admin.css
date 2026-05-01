@@ -1,0 +1,79 @@
+/* BI - AI Scenes / Inpainting / Upscale - admin theme. */
+:root {
+    --bi-scenes-accent: #4f46e5;
+    --bi-scenes-bg: #f6f7fb;
+    --bi-scenes-card: #ffffff;
+    --bi-scenes-border: #e5e7eb;
+    --bi-scenes-muted: #6b7280;
+    --bi-scenes-text: #0f172a;
+    --bi-scenes-success: #10b981;
+    --bi-scenes-warn: #f59e0b;
+    --bi-scenes-danger: #ef4444;
+}
+
+.bi-scenes-page { font: 14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif; color: var(--bi-scenes-text); padding: 16px; }
+.bi-scenes-hero { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; background: linear-gradient(135deg,#4f46e5,#0ea5e9); color: #fff; border-radius: 14px; margin-bottom: 16px; }
+.bi-scenes-hero h1 { font-size: 22px; margin: 0 0 4px; }
+.bi-scenes-hero p { margin: 0; opacity: .9; }
+.bi-scenes-hero .btn { background: #fff; color: var(--bi-scenes-accent); border: 0; padding: 8px 14px; border-radius: 8px; font-weight: 600; text-decoration: none; }
+.bi-scenes-hero .btn-outline { background: transparent; color: #fff; border: 1px solid #fff; }
+
+.bi-scenes-credentials { padding: 10px 14px; border-radius: 10px; background: var(--bi-scenes-card); border: 1px solid var(--bi-scenes-border); margin-bottom: 16px; }
+.bi-scenes-credentials.is-ok { border-left: 4px solid var(--bi-scenes-success); }
+.bi-scenes-credentials.is-warn { border-left: 4px solid var(--bi-scenes-warn); }
+
+.bi-scenes-stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap: 12px; margin-bottom: 16px; }
+.bi-scenes-stat { background: var(--bi-scenes-card); border: 1px solid var(--bi-scenes-border); border-radius: 12px; padding: 14px; text-align: center; }
+.bi-scenes-stat .num { display: block; font-size: 28px; font-weight: 700; color: var(--bi-scenes-accent); }
+.bi-scenes-stat .lbl { color: var(--bi-scenes-muted); text-transform: uppercase; font-size: 11px; letter-spacing: .04em; }
+
+.bi-scenes-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap: 12px; }
+.bi-scenes-card { background: var(--bi-scenes-card); border: 1px solid var(--bi-scenes-border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+.bi-scenes-card .thumb { aspect-ratio: 1/1; background: #f3f4f6; display: flex; align-items: center; justify-content: center; }
+.bi-scenes-card .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.bi-scenes-card .placeholder { color: var(--bi-scenes-muted); font-size: 12px; }
+.bi-scenes-card .meta { padding: 8px; display: flex; gap: 6px; flex-wrap: wrap; font-size: 11px; }
+.bi-scenes-card .op { padding: 2px 8px; border-radius: 999px; background: #ede9fe; color: #4338ca; font-weight: 600; }
+.bi-scenes-card .op.inpaint { background: #fef3c7; color: #b45309; }
+.bi-scenes-card .op.upscale { background: #dcfce7; color: #15803d; }
+.bi-scenes-card .prov { color: var(--bi-scenes-muted); }
+.bi-scenes-card .date { color: var(--bi-scenes-muted); margin-left: auto; font-size: 10px; }
+
+.bi-scenes-form fieldset { margin: 0 0 16px; padding: 14px 16px; border: 1px solid var(--bi-scenes-border); border-radius: 12px; background: var(--bi-scenes-card); }
+.bi-scenes-form legend { padding: 0 8px; font-weight: 600; }
+.bi-scenes-form label { display: block; margin: 8px 0; }
+.bi-scenes-form input, .bi-scenes-form select, .bi-scenes-form textarea { width: 100%; padding: 8px; border: 1px solid var(--bi-scenes-border); border-radius: 8px; }
+.bi-scenes-form input[type="color"] { width: 60px; height: 36px; padding: 0; }
+.bi-scenes-form input[type="checkbox"] { width: auto; }
+.bi-scenes-actions { margin-top: 12px; display: flex; gap: 8px; }
+.btn-primary { background: var(--bi-scenes-accent); color: #fff; border: 0; padding: 8px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.btn-outline { background: transparent; color: var(--bi-scenes-accent); border: 1px solid var(--bi-scenes-accent); padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+
+/* Studio */
+.bi-scenes-tabs { display: flex; gap: 6px; margin-top: 8px; }
+.bi-scenes-tab { background: rgba(255,255,255,.18); color: #fff; border: 0; padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.bi-scenes-tab.is-active { background: #fff; color: var(--bi-scenes-accent); font-weight: 600; }
+.bi-scenes-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+@media (max-width: 1100px) { .bi-scenes-cols { grid-template-columns: 1fr; } }
+.bi-scenes-col { background: var(--bi-scenes-card); border: 1px solid var(--bi-scenes-border); border-radius: 14px; padding: 14px; }
+.bi-scenes-col h2 { font-size: 16px; margin: 0 0 10px; }
+.bi-scenes-uploader input { width: 100%; padding: 10px; border: 1px dashed var(--bi-scenes-border); border-radius: 10px; }
+.bi-scenes-canvas-wrap { position: relative; margin-top: 10px; border: 1px solid var(--bi-scenes-border); border-radius: 10px; overflow: hidden; background: #f3f4f6; min-height: 240px; }
+.bi-scenes-source-img { width: 100%; display: block; }
+.bi-scenes-mask-canvas { position: absolute; inset: 0; cursor: crosshair; touch-action: none; }
+.bi-scenes-mask-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+.bi-scenes-row { display: flex; gap: 8px; }
+.bi-scenes-row label { flex: 1; }
+
+.bi-scenes-status { min-height: 1.4em; padding: 6px 8px; border-radius: 8px; }
+.bi-scenes-status[data-kind="info"] { background: #eff6ff; color: #1d4ed8; }
+.bi-scenes-status[data-kind="ok"] { background: #ecfdf5; color: #047857; }
+.bi-scenes-status[data-kind="warn"] { background: #fffbeb; color: #b45309; }
+.bi-scenes-status[data-kind="error"] { background: #fef2f2; color: #b91c1c; }
+
+.bi-scenes-compare { position: relative; aspect-ratio: 1/1; border-radius: 12px; overflow: hidden; background: #f3f4f6; border: 1px solid var(--bi-scenes-border); }
+.bi-scenes-compare img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.bi-scenes-compare .bi-scenes-after { z-index: 2; }
+.bi-scenes-compare .bi-scenes-slider { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 3; width: calc(100% - 16px); }
+.bi-scenes-history { display: grid; grid-template-columns: repeat(auto-fill,minmax(120px,1fr)); gap: 8px; margin-top: 12px; }

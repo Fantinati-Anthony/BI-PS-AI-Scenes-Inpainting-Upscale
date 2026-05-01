@@ -1,0 +1,8 @@
+{
+  "name": "blazing-ideas/bi_ai_scenes_inpainting",
+  "description": "PrestaShop module - AI scenes / inpainting / upscale via Replicate",
+  "type": "prestashop-module",
+  "license": "AFL-3.0",
+  "authors": [{ "name": "Anthony Fantinati - Blazing Ideas" }],
+  "require": { "php": ">=7.2" }
+}

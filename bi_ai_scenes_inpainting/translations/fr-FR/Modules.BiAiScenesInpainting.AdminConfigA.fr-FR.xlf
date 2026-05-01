@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<xliff version="1.1">
+  <file source-language="en-US" target-language="fr-FR" datatype="plaintext" original="Modules.BiAiScenesInpainting.AdminConfigA">
+    <body>
+      <trans-unit id="cfg.title"><source>Configuration</source><target>Configuration</target></trans-unit>
+      <trans-unit id="cfg.intro"><source>Set your Replicate API key, select default providers and customize the modal theme.</source><target>Renseignez votre clé Replicate, choisissez les fournisseurs par défaut et personnalisez le thème de la modale.</target></trans-unit>
+      <trans-unit id="cfg.creds"><source>API credentials</source><target>Identifiants API</target></trans-unit>
+      <trans-unit id="cfg.api_key"><source>Replicate API key</source><target>Clé API Replicate</target></trans-unit>
+      <trans-unit id="cfg.providers"><source>Default providers</source><target>Fournisseurs par défaut</target></trans-unit>
+      <trans-unit id="cfg.scene"><source>Scene staging</source><target>Mise en scène</target></trans-unit>
+      <trans-unit id="cfg.inpaint"><source>Inpainting</source><target>Inpainting</target></trans-unit>
+      <trans-unit id="cfg.upscale"><source>Upscale</source><target>Upscale</target></trans-unit>
+      <trans-unit id="cfg.save"><source>Save settings</source><target>Enregistrer</target></trans-unit>
+    </body>
+  </file>
+</xliff>

@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<xliff version="1.1">
+  <file source-language="en-US" target-language="fr-FR" datatype="plaintext" original="Modules.BiAiScenesInpainting.AdminGenerate">
+    <body>
+      <trans-unit id="studio.title"><source>Studio - Scenes / Inpaint / Upscale</source><target>Studio - Scènes / Inpainting / Upscale</target></trans-unit>
+      <trans-unit id="tab.scene"><source>Scene staging</source><target>Mise en scène</target></trans-unit>
+      <trans-unit id="tab.inpaint"><source>Inpainting</source><target>Inpainting</target></trans-unit>
+      <trans-unit id="tab.upscale"><source>Upscale</source><target>Upscale</target></trans-unit>
+      <trans-unit id="source"><source>Source</source><target>Source</target></trans-unit>
+      <trans-unit id="parameters"><source>Parameters</source><target>Paramètres</target></trans-unit>
+      <trans-unit id="output"><source>Output</source><target>Résultat</target></trans-unit>
+      <trans-unit id="provider"><source>Provider</source><target>Fournisseur</target></trans-unit>
+      <trans-unit id="prompt"><source>Prompt</source><target>Prompt</target></trans-unit>
+      <trans-unit id="negative_prompt"><source>Negative prompt</source><target>Prompt négatif</target></trans-unit>
+      <trans-unit id="aspect_ratio"><source>Aspect ratio</source><target>Ratio</target></trans-unit>
+      <trans-unit id="output_format"><source>Output</source><target>Format</target></trans-unit>
+      <trans-unit id="scale"><source>Scale</source><target>Facteur</target></trans-unit>
+      <trans-unit id="strength"><source>Strength</source><target>Force</target></trans-unit>
+      <trans-unit id="guidance"><source>Guidance</source><target>Guidance</target></trans-unit>
+      <trans-unit id="seed"><source>Seed</source><target>Graine</target></trans-unit>
+      <trans-unit id="steps"><source>Inference steps</source><target>Étapes d'inférence</target></trans-unit>
+      <trans-unit id="advanced"><source>Advanced</source><target>Avancé</target></trans-unit>
+      <trans-unit id="generate"><source>Generate</source><target>Générer</target></trans-unit>
+      <trans-unit id="cancel"><source>Cancel</source><target>Annuler</target></trans-unit>
+      <trans-unit id="brush_up"><source>Brush +</source><target>Pinceau +</target></trans-unit>
+      <trans-unit id="brush_down"><source>Brush -</source><target>Pinceau -</target></trans-unit>
+      <trans-unit id="undo"><source>Undo</source><target>Annuler</target></trans-unit>
+      <trans-unit id="clear_mask"><source>Clear mask</source><target>Effacer le masque</target></trans-unit>
+      <trans-unit id="history"><source>History</source><target>Historique</target></trans-unit>
+      <trans-unit id="dropurl"><source>Drop or paste a product image URL</source><target>Déposez ou collez une URL d'image produit</target></trans-unit>
+      <trans-unit id="prompt_hint"><source>A photorealistic product photo on a marble countertop, soft daylight, 50mm lens, ...</source><target>Une photo produit photoréaliste sur un comptoir en marbre, lumière douce, objectif 50mm, ...</target></trans-unit>
+    </body>
+  </file>
+</xliff>
